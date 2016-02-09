@@ -75,7 +75,7 @@ class MultiplicativeFunctional(object):
 
         if M_inits is None:
             self.M_inits = np.ones(self.n)
-        elif isinstance(M_inits, numbers.Number):
+        elif isinstance(M_inits, numbers.Real):
             self.M_inits = np.empty(self.n)
             self.M_inits.fill(M_inits)
         else:
