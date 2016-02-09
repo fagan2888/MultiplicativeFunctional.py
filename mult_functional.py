@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 
 
@@ -13,10 +14,12 @@ class MultiplicativeFunctional(object):
     G : array_like(float, ndim=2)
         Growth rate matrix. Must be of shape n x n.
 
-    M_inits : array_like(float, ndim=1), optional(default=None)
+    M_inits : array_like(float, ndim=1) or scalar(float),
+              optional(default=None)
         Array containing the initial values of the `M` process, one for
         each state. Must be of length n. If not specified, default to
-        the vector of all ones.
+        the vector of all ones. If it is a scalar, then it is converted
+        to the constant vector of that scalar.
 
     Attributes
     ----------
@@ -71,13 +74,16 @@ class MultiplicativeFunctional(object):
             )
 
         if M_inits is None:
-            M_inits = np.ones(self.n)
-        self.M_inits = np.asarray(M_inits)
-
-        if len(self.M_inits) != self.n:
-            raise ValueError(
-                'length of M_inits must be equal to the number of states'
-            )
+            self.M_inits = np.ones(self.n)
+        elif isinstance(M_inits, numbers.Number):
+            self.M_inits = np.empty(self.n)
+            self.M_inits.fill(M_inits)
+        else:
+            if len(M_inits) != self.n:
+                raise ValueError(
+                    'length of M_inits must be equal to the number of states'
+                )
+            self.M_inits = np.asarray(M_inits)
 
         self.M_matrix = np.exp(self.G)
         self.P_tilde = self.P * self.M_matrix
