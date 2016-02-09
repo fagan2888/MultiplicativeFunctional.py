@@ -1,5 +1,4 @@
 import numpy as np
-from quantecon.markov import MarkovChain
 from mult_functional import MultiplicativeFunctional, _Result
 
 
