@@ -1,5 +1,6 @@
 import numpy as np
-from mult_functional import MultiplicativeFunctional, _Result
+from mult_functional import MultiplicativeFunctional
+from utils import _Result
 
 
 class AssetPricingSDF(object):
