@@ -22,7 +22,8 @@ class AssetPricingSDF(object):
     d_inits : array_like(float, ndim=1), optional(default=None)
         Array containing the initial values of the dividend, one for
         each state. Must be of length n. If not specified, default to
-        the vector of all ones.
+        the vector of all ones. If it is a scalar, then it is converted
+        to the constant vector of that scalar.
 
     Attributes
     ----------
@@ -135,6 +136,101 @@ class AssetPricingSDF(object):
                                   d_tilde=d_tilde,
                                   p=p)
         return res
+
+
+class LucasTreeFiniteMarkov(object):
+    """
+    Class representing the Lucas asset pricing model with finite Markov
+    states.
+
+    Parameters
+    ----------
+    mc : MarkovChain
+        MarkovChain instance with n states representing the `X` process.
+
+    G_C : array_like(float, ndim=2)
+        Growth rate matrix for the consumption endowment. Must be of
+        shape n x n.
+
+    C_inits : array_like(float, ndim=1), optional(default=None)
+        Array containing the initial values of the endowment, one for
+        each state. Must be of length n. If not specified, default to
+        the vector of all ones. If it is a scalar, then it is converted
+        to the constant vector of that scalar.
+
+    Attributes
+    ----------
+    mc : MarkovChain
+        See Parameters.
+
+    G_C : ndarray(float, ndim=2)
+        See Parameters.
+
+    C_inits: ndarray(float, ndim=1)
+        See Parameters.
+
+    n : scalar(int)
+        Number of the state.
+
+    P : ndarray(float, ndim=2)
+        Transition probability matrix of `mc`.
+
+    G_S : ndarray(float, ndim=2)
+        Discount rate matrix.
+
+    v : ndarray(float, ndim=1)
+        Endowment-price ratios.
+
+    """
+    def __init__(self, mc, G_C, gamma, delta, C_inits=None):
+        self.mc = mc
+        self.n = mc.n
+        self.P = mc.P
+
+        self.G_C = np.asarray(G_C)
+
+        # Stochastic discount rate matrix
+        self.G_S = -delta - gamma * self.G_C
+
+        self.ap = AssetPricingSDF(mc, self.G_S, self.G_C, d_inits=C_inits)
+        self.P_check = self.ap.P_check
+        self.P_tilde = self.ap.P_tilde
+        self.v = self.ap.v
+
+    def simulate(self, ts_length, X_init=None,
+                 num_reps=None, random_state=None):
+        """
+        Simulate the model.
+
+        Parameters
+        ----------
+        ts_length : scalar(int)
+            Length of each simulation.
+
+        X_init : scalar(int), optional(default=None)
+            Initial state of the `X` process. If None, the initial state
+            is randomly drawn.
+
+        num_reps : scalar(int), optional(default=None)
+            Number of repetitions of simulation.
+
+        random_state : scalar(int) or np.random.RandomState,
+                       optional(default=None)
+            Random seed (integer) or np.random.RandomState instance to
+            set the initial state of the random number generator for
+            reproducibility. If None, a randomly initialized RandomState
+            is used.
+
+        Returns
+        -------
+        res: APSDFSimulateResult
+            Simulation result represetned as a `APSDFSimulateResult`.
+            See `APSDFSimulateResult` for details. The array for each
+            attribute is of shape `(ts_length,)` if `num_reps=None`, or
+            of shape `(num_reps, ts_length)` otherwise.
+
+        """
+        return self.ap.simulate(ts_length, X_init, num_reps, random_state)
 
 
 class APSDFSimulateResult(_Result):
