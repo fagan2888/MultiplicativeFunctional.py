@@ -72,8 +72,8 @@ class AssetPricingMultFiniteMarkov(object):
         self.mf_S = MultFunctionalFiniteMarkov(self.mc, G_S)
         self.mf_d = MultFunctionalFiniteMarkov(self.mc, G_d, M_inits=d_inits)
 
-        self.P_check = self.P * self.mf_S.M_matrix
-        self.P_tilde = self.P_check * self.mf_d.M_matrix
+        self.P_hat = self.P * self.mf_S.M_matrix
+        self.P_tilde = self.P_hat * self.mf_d.M_matrix
 
         if not self._check_spectral_radius():
             msg = 'P_tilde has an eigenvalue not smaller than one'
@@ -82,9 +82,9 @@ class AssetPricingMultFiniteMarkov(object):
             # warnings.warn(msg, UserWarning)
             print('Warning:', msg)
 
-        # Solve the linear equation v = P_tilde v + P_check 1
+        # Solve the linear equation v = P_tilde v + P_hat 1
         A = np.identity(self.n) - self.P_tilde
-        b = self.P_check.dot(np.ones(self.n))
+        b = self.P_hat.dot(np.ones(self.n))
         self.v = np.linalg.solve(A, b)
 
     def _check_spectral_radius(self):
@@ -224,7 +224,7 @@ class LucasTreeFiniteMarkov(object):
         self.ap = AssetPricingMultFiniteMarkov(
             mc, self.G_S, self.G_C, d_inits=C_inits
         )
-        self.P_check = self.ap.P_check
+        self.P_hat = self.ap.P_hat
         self.P_tilde = self.ap.P_tilde
         self.v = self.ap.v
 
