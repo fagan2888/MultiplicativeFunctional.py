@@ -1,16 +1,24 @@
+"""
+Author: Daisuke Oyama
+
+Mudule for working with multiplicative functionals of a Markov process.
+
+"""
 import numbers
 import numpy as np
 from utils import _Result
 
 
-class MultiplicativeFunctional(object):
+class MultFunctionalFiniteMarkov(object):
     """
-    Class representing a multiplicative functional.
+    Class representing a multiplicative functional driven by a finite
+    state Markov chain.
 
     Parameters
     ----------
     mc : MarkovChain
-        MarkovChain instance with n states representing the `X` process.
+        MarkovChain instance with n states representing the underlying
+        `X` process.
 
     G : array_like(float, ndim=2)
         Growth rate matrix. Must be of shape n x n.
@@ -121,11 +129,11 @@ class MultiplicativeFunctional(object):
 
         Returns
         -------
-        res: MFSimulateResult
-            Simulation result represetned as a `MFSimulateResult`. See
-            `MFSimulateResult` for details. The array for each attribute
-            is of shape `(ts_length,)` if `num_reps=None`, or of shape
-            `(num_reps, ts_length)` otherwise.
+        res: MFFMSimulateResult
+            Simulation result represetned as a `MFFMSimulateResult`. See
+            `MFFMSimulateResult` for details. The array for each
+            attribute is of shape `(ts_length,)` if `num_reps=None`, or
+            of shape `(num_reps, ts_length)` otherwise.
 
         """
         X = self.mc.simulate(ts_length, init=X_init,
@@ -144,19 +152,19 @@ class MultiplicativeFunctional(object):
 
         Returns
         -------
-        res: MFSimulateResult
-            Simulation result represetned as a `MFSimulateResult`. See
-            `MFSimulateResult` for details. The array for each attribute
-            is of the same shape as `X`.
+        res: MFFMSimulateResult
+            Simulation result represetned as a `MFFMSimulateResult`. See
+            `MFFMSimulateResult` for details. The array for each
+            attribute is of the same shape as `X`.
 
         """
         X = np.asarray(X)
         M = _generate_mult_process(X, self.M_matrix, self.M_inits)
         M_tilde_inits = np.ones(self.n)
         M_tilde = _generate_mult_process(X, self.M_tilde_matrix, M_tilde_inits)
-        res = MFSimulateResult(X=X,
-                               M=M,
-                               M_tilde=M_tilde)
+        res = MFFMSimulateResult(X=X,
+                                 M=M,
+                                 M_tilde=M_tilde)
         return res
 
 
@@ -196,10 +204,10 @@ def _solve_principal_eig(a):
     return eig_val, eig_vec
 
 
-class MFSimulateResult(_Result):
+class MFFMSimulateResult(_Result):
     """
     Contain the information about the simulation result for
-    `MultiplicativeFunctional`.
+    `MultFunctionalFiniteMarkov`.
 
     Attributes
     ----------
