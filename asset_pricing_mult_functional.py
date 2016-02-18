@@ -6,6 +6,7 @@ consumption endowments where the growth rate is determined by a finite
 state Markov chain.
 
 """
+import warnings
 import numpy as np
 from mult_functional import MultFunctionalFiniteMarkov
 from utils import _Result
@@ -74,10 +75,27 @@ class AssetPricingMultFiniteMarkov(object):
         self.P_check = self.P * self.mf_S.M_matrix
         self.P_tilde = self.P_check * self.mf_d.M_matrix
 
+        if not self._check_spectral_radius():
+            msg = 'P_tilde has an eigenvalue not smaller than one'
+            # Ignored by warnings.filterwarnings('ignore')
+            # somewhere in qunatecon
+            # warnings.warn(msg, UserWarning)
+            print('Warning:', msg)
+
         # Solve the linear equation v = P_tilde v + P_check 1
         A = np.identity(self.n) - self.P_tilde
         b = self.P_check.dot(np.ones(self.n))
         self.v = np.linalg.solve(A, b)
+
+    def _check_spectral_radius(self):
+        """
+        Check that the eigenvalues of P_tilde are smaller than one.
+        Under the premise that P_tilde is nonnegative, this implies that
+        I - P_tilde is inverse positive.
+
+        """
+        eig_vals, _ = np.linalg.eig(self.P_tilde)
+        return (eig_vals < 1).all()
 
     def simulate(self, ts_length, X_init=None,
                  num_reps=None, random_state=None):
