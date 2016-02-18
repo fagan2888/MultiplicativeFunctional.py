@@ -1,19 +1,29 @@
+"""
+Author: Daisuke Oyama
+
+Mudule for simulating asset prices under exponentially growing
+consumption endowments where the growth rate is determined by a finite
+state Markov chain.
+
+"""
 import numpy as np
-from mult_functional import MultiplicativeFunctional
+from mult_functional import MultFunctionalFiniteMarkov
 from utils import _Result
 
 
-class AssetPricingSDF(object):
+class AssetPricingMultFiniteMarkov(object):
     """
     Class representing the asset pricing model with stochastic discount
-    factors.
+    factor and dividend processes governed by a multiplicative
+    functional.
 
     Parameters
     ----------
     mc : MarkovChain
-        MarkovChain instance with n states representing the `X` process.
+        MarkovChain instance with n states representing the underlying
+        `X` process.
 
-    G_s : array_like(float, ndim=2)
+    G_S : array_like(float, ndim=2)
         Discount rate matrix. Must be of shape n x n.
 
     G_d : array_like(float, ndim=2)
@@ -30,7 +40,7 @@ class AssetPricingSDF(object):
     mc : MarkovChain
         See Parameters.
 
-    G_s, G_d : ndarray(float, ndim=2)
+    G_S, G_d : ndarray(float, ndim=2)
         See Parameters.
 
     d_inits: ndarray(float, ndim=1)
@@ -42,26 +52,26 @@ class AssetPricingSDF(object):
     P : ndarray(float, ndim=2)
         Transition probability matrix of `mc`.
 
-    mf_s : MultiplicativeFunctional
-        MultiplicativeFunctional instance for the stochastic discount
+    mf_S : MultFunctionalFiniteMarkov
+        MultFunctionalFiniteMarkov instance for the stochastic discount
         factor process.
 
-    mf_d : MultiplicativeFunctional
-        MultiplicativeFunctional instance for the dividend process.
+    mf_d : MultFunctionalFiniteMarkov
+        MultFunctionalFiniteMarkov instance for the dividend process.
 
     v : ndarray(float, ndim=1)
         Dividend-price ratios.
 
     """
-    def __init__(self, mc, G_s, G_d, d_inits=None):
+    def __init__(self, mc, G_S, G_d, d_inits=None):
         self.mc = mc
         self.n = mc.n
         self.P = mc.P
 
-        self.mf_s = MultiplicativeFunctional(self.mc, G_s)
-        self.mf_d = MultiplicativeFunctional(self.mc, G_d, M_inits=d_inits)
+        self.mf_S = MultFunctionalFiniteMarkov(self.mc, G_S)
+        self.mf_d = MultFunctionalFiniteMarkov(self.mc, G_d, M_inits=d_inits)
 
-        self.P_check = self.P * self.mf_s.M_matrix
+        self.P_check = self.P * self.mf_S.M_matrix
         self.P_tilde = self.P_check * self.mf_d.M_matrix
 
         # Solve the linear equation v = P_tilde v + P_check 1
@@ -95,9 +105,9 @@ class AssetPricingSDF(object):
 
         Returns
         -------
-        res: APSDFSimulateResult
-            Simulation result represetned as a `APSDFSimulateResult`.
-            See `APSDFSimulateResult` for details. The array for each
+        res: APSMFMSimulateResult
+            Simulation result represetned as a `APSMFMSimulateResult`.
+            See `APSMFMSimulateResult` for details. The array for each
             attribute is of shape `(ts_length,)` if `num_reps=None`, or
             of shape `(num_reps, ts_length)` otherwise.
 
@@ -118,23 +128,23 @@ class AssetPricingSDF(object):
 
         Returns
         -------
-        res: APSDFSimulateResult
-            Simulation result represetned as a `APSDFSimulateResult`.
-            See `APSDFSimulateResult` for details. The array for each
+        res: APSMFMSimulateResult
+            Simulation result represetned as a `APSMFMSimulateResult`.
+            See `APSMFMSimulateResult` for details. The array for each
             attribute is of the same shape as `X`.
 
         """
-        res_s = self.mf_s.generate_paths(X)
+        res_S = self.mf_S.generate_paths(X)
         res_d = self.mf_d.generate_paths(X)
-        s, s_tilde = res_s.M, res_s.M_tilde
+        S, S_tilde = res_S.M, res_S.M_tilde
         d, d_tilde = res_d.M, res_d.M_tilde
         p = d * self.v[X]
-        res = APSDFSimulateResult(X=X,
-                                  s=s,
-                                  s_tilde=s_tilde,
-                                  d=d,
-                                  d_tilde=d_tilde,
-                                  p=p)
+        res = APSMFMSimulateResult(X=X,
+                                   S=S,
+                                   S_tilde=S_tilde,
+                                   d=d,
+                                   d_tilde=d_tilde,
+                                   p=p)
         return res
 
 
@@ -146,7 +156,8 @@ class LucasTreeFiniteMarkov(object):
     Parameters
     ----------
     mc : MarkovChain
-        MarkovChain instance with n states representing the `X` process.
+        MarkovChain instance with n states representing the underlying
+        `X` process.
 
     G_C : array_like(float, ndim=2)
         Growth rate matrix for the consumption endowment. Must be of
@@ -192,7 +203,9 @@ class LucasTreeFiniteMarkov(object):
         # Stochastic discount rate matrix
         self.G_S = -delta - gamma * self.G_C
 
-        self.ap = AssetPricingSDF(mc, self.G_S, self.G_C, d_inits=C_inits)
+        self.ap = AssetPricingMultFiniteMarkov(
+            mc, self.G_S, self.G_C, d_inits=C_inits
+        )
         self.P_check = self.ap.P_check
         self.P_tilde = self.ap.P_tilde
         self.v = self.ap.v
@@ -223,9 +236,9 @@ class LucasTreeFiniteMarkov(object):
 
         Returns
         -------
-        res: APSDFSimulateResult
-            Simulation result represetned as a `APSDFSimulateResult`.
-            See `APSDFSimulateResult` for details. The array for each
+        res: APSMFMSimulateResult
+            Simulation result represetned as a `APSMFMSimulateResult`.
+            See `APSMFMSimulateResult` for details. The array for each
             attribute is of shape `(ts_length,)` if `num_reps=None`, or
             of shape `(num_reps, ts_length)` otherwise.
 
@@ -233,18 +246,18 @@ class LucasTreeFiniteMarkov(object):
         return self.ap.simulate(ts_length, X_init, num_reps, random_state)
 
 
-class APSDFSimulateResult(_Result):
+class APSMFMSimulateResult(_Result):
     """
     Contain the information about the simulation result for
-    `AssetPricingSDF`.
+    `AssetPricingMultFiniteMarkov`.
 
     Attributes
     ----------
-    s : ndarray(float, ndim=1 or 2)
+    S : ndarray(float, ndim=1 or 2)
         Array containing the sample path(s) of the discount factor
         process.
 
-    s_tilde : ndarray(float, ndim=1 or 2)
+    S_tilde : ndarray(float, ndim=1 or 2)
         Array containing the sample path(s) of the multiplicative
         martingale component of the discount factor process.
 
