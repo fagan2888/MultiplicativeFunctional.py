@@ -4,6 +4,7 @@ Author: Daisuke Oyama
 Mudule for working with multiplicative functionals of a Markov process.
 
 """
+import warnings
 import numbers
 import numpy as np
 from utils import _Result
@@ -71,6 +72,13 @@ class MultFunctionalFiniteMarkov(object):
         self.mc = mc
         self.n = mc.n
         self.P = mc.P
+
+        if not self.mc.is_irreducible:
+            msg = 'mc is not irreducible'
+            # Ignored by warnings.filterwarnings('ignore')
+            # somewhere in qunatecon
+            # warnings.warn(msg, UserWarning)
+            print('Warning:', msg)
 
         self.G = np.asarray(G)
 
